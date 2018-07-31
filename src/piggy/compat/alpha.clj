@@ -45,20 +45,3 @@
                        (as-> {} m
                          (if-not -old (assoc m :old (s/form old)) m)
                          (if-not -new (assoc m :new (s/form new)) m))))))))
-
-(comment
-  "Example specs"
-
-  (s/def ::int int?)
-  (s/def ::number number?)
-
-  (s/fdef plus
-    :args (s/cat :x ::int :y ::int)
-    :ret ::int)
-
-  (s/def ::old (s/fspec :args (s/cat :x ::int :y ::int), :ret ::int))
-
-  (s/def ::new (s/fspec :args (s/cat :x ::int :y ::int), :ret ::int))
-
-  (defn plus [x y] (+ x y))
-  )
