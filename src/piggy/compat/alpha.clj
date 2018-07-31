@@ -35,17 +35,16 @@
   ([old new] (exercise-args old new 10))
   ([old new n] (exercise-args old new n nil))
   ([old new n overrides]
-   (let [destructure #(let [[kw x] (s/conform ::args %)]
-                        (condp = kw
-                          :sym x
-                          :kw x
-                          :fspec x
-                          :regex x
-                          "Not sure what this else condition means..."))
-         old' (destructure old)
-         new' (destructure new)]
-     (map #(vector % (s/conform old' %) (s/conform new' %))
-          (sgen/sample (s/gen old' overrides) n)))))
+   (let [->args-spec #(some->> % (s/conform ::->args) valid second)
+         -old (->args-spec old)
+         -new (->args-spec new)]
+     (if (and -old -new)
+       (map #(vector % (s/conform -old %) (s/conform -new %))
+            (sgen/sample (s/gen -old overrides) n))
+       (throw (ex-info "No :args spec found, can't generate"
+                       (as-> {} m
+                         (if-not -old (assoc m :old (s/form old)) m)
+                         (if-not -new (assoc m :new (s/form new)) m))))))))
 
 (comment
   "Example specs"
