@@ -26,6 +26,12 @@
   :ret ::int)
 (defn- plus [x y] (+ x y))
 
+(s/def ::->args-gen
+  (s/or :symbol (with-examples (s/and qualified-symbol? ::compat/sym-or-kw->args) #{`plus `compat/valid})
+        :keyword (with-examples (s/and qualified-keyword? ::compat/sym-or-kw->args) #{::old ::new})
+        :fspec (with-examples (s/and s/spec? ::compat/fspec->args) #{(s/fspec :args (s/* some?) :ret any?)})
+        :regex (with-examples s/regex? #{(s/* any?)})))
+
 ;; testing
 
 (deftest consistency-test
