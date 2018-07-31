@@ -35,7 +35,7 @@
   ([old new] (exercise-args old new 10))
   ([old new n] (exercise-args old new n nil))
   ([old new n overrides]
-   (let [->args-spec #(some->> % (s/conform ::->args) valid second)
+   (let [->args-spec #(when-let [[_ args] (valid (s/conform ::->args %))] args)
          -old (->args-spec old)
          -new (->args-spec new)]
      (if (and -old -new)
