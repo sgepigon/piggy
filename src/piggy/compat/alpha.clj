@@ -12,6 +12,14 @@
                       :fspec (s/and s/spec? ::fspec->args)
                       :regex s/regex?))
 
+(s/fdef valid
+  :args (s/cat :x any?)
+  :ret (complement s/invalid?))
+(defn- valid
+  "Return `x` if `x` is a valid s/conform return value, nil otherwise."
+  [x]
+  (when ((complement s/invalid?) x) x))
+
 (s/fdef exercise-args
   :args (s/alt :default (s/cat :old ::->args, :new ::->args)
                :n-samples (s/cat :old ::->args, :new ::->args, :n nat-int?)
