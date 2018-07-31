@@ -5,6 +5,15 @@
             [clojure.test :refer :all]
             [piggy.compat.alpha :as compat]))
 
+(s/fdef with-examples
+  :args (s/cat :spec s/spec? :examples set?)
+  :ret any?)
+(defn- with-examples
+  "Takes a spec and a set of examples and returns a version of that spec that uses
+  that generator of `examples`."
+  [spec examples]
+  (s/with-gen spec #(s/gen examples)))
+
 ;; Example specs
 
 (s/def ::int int?)
