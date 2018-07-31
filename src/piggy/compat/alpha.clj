@@ -5,7 +5,7 @@
             [expound.alpha :as expound]))
 
 ;; conformer specs
-(s/def ::fspec->args (s/conformer #(:args %)))
+(s/def ::fspec->args (s/and (s/conformer #(:args %)) some?))
 (s/def ::sym-or-kw->args (s/and (s/conformer s/get-spec) ::fspec->args))
 (s/def ::->args (s/or :symbol (s/and qualified-symbol? ::sym-or-kw->args)
                       :keyword (s/and qualified-keyword? ::sym-or-kw->args)
