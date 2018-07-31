@@ -4,13 +4,12 @@
             [clojure.spec.test.alpha :as stest]
             [expound.alpha :as expound]))
 
-(s/def ::args (s/or :sym (s/and qualified-symbol?
-                                (s/conformer s/get-spec)
-                                (s/conformer #(:args %)))
-                    :kw (s/and qualified-keyword?
-                               (s/conformer s/get-spec)
-                               (s/conformer #(:args %)))
-                    :fspec (s/and s/spec? (s/conformer #(:args %)))
+;; conformer specs
+(s/def ::fspec->args (s/conformer #(:args %)))
+(s/def ::sym-or-kw->args (s/and (s/conformer s/get-spec) ::fspec->args))
+(s/def ::args (s/or :symbol (s/and qualified-symbol? ::sym-or-kw->args)
+                    :keyword (s/and qualified-keyword? ::sym-or-kw->args)
+                    :fspec (s/and s/spec? ::fspec->args)
                     :regex s/regex?))
 
 (s/fdef exercise-args
