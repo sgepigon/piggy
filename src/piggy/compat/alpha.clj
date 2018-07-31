@@ -7,15 +7,15 @@
 ;; conformer specs
 (s/def ::fspec->args (s/conformer #(:args %)))
 (s/def ::sym-or-kw->args (s/and (s/conformer s/get-spec) ::fspec->args))
-(s/def ::args (s/or :symbol (s/and qualified-symbol? ::sym-or-kw->args)
-                    :keyword (s/and qualified-keyword? ::sym-or-kw->args)
-                    :fspec (s/and s/spec? ::fspec->args)
-                    :regex s/regex?))
+(s/def ::->args (s/or :symbol (s/and qualified-symbol? ::sym-or-kw->args)
+                      :keyword (s/and qualified-keyword? ::sym-or-kw->args)
+                      :fspec (s/and s/spec? ::fspec->args)
+                      :regex s/regex?))
 
 (s/fdef exercise-args
-  :args (s/alt :default (s/cat :old ::args, :new ::args)
-               :n-samples (s/cat :old ::args, :new ::args, :n nat-int?)
-               :overrides (s/cat :old ::args, :new ::args,
+  :args (s/alt :default (s/cat :old ::->args, :new ::->args)
+               :n-samples (s/cat :old ::->args, :new ::->args, :n nat-int?)
+               :overrides (s/cat :old ::->args, :new ::->args,
                                  :n nat-int?, :overrides (s/nilable map?)))
   :ret (s/every (s/cat :val any?, :old-conformed-val any?, :new-conformed-val any?)))
 (defn exercise-args
