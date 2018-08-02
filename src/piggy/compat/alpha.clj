@@ -25,7 +25,7 @@
                :n-samples (s/cat :old ::->args, :new ::->args, :n nat-int?)
                :overrides (s/cat :old ::->args, :new ::->args,
                                  :n nat-int?, :overrides (s/nilable map?)))
-  :ret (s/every (s/cat :val any?, :old-conformed-val any?, :new-conformed-val any?)))
+  :ret (s/every vector?))
 (defn exercise-args
   "Generates a number (default 10) of values compatible with `old` and conforms
   the `old` and `new` specs over them, returning a sequence of
