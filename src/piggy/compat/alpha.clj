@@ -29,20 +29,20 @@
   [x]
   (when ((complement s/invalid?) x) x))
 
-(s/fdef exercise-args
+(s/fdef exercise
   :args (s/alt :default (s/cat :old ::fargs, :new ::fargs)
                :n-samples (s/cat :old ::fargs, :new ::fargs, :n nat-int?)
                :overrides (s/cat :old ::fargs, :new ::fargs,
                                  :n nat-int?, :overrides (s/nilable map?)))
   :ret (s/every vector?))
-(defn exercise-args
+(defn exercise
   "Generates a number (default 10) of values compatible with `old` and conforms
   the `old` and `new` specs over them, returning a sequence of
   [val old-conformed-val new-conformed-val] tuples. For values that don't
   conform to `new`, new-conformed-val will be ::s/invalid. Optionally takes a
   generator overrides map as per gen for `old`."
-  ([old new] (exercise-args old new 10))
-  ([old new n] (exercise-args old new n nil))
+  ([old new] (exercise old new 10))
+  ([old new n] (exercise old new n nil))
   ([old new n overrides]
    (let [->fargs #(when-let [[_ args] (valid (s/conform ::->fargs %))] args)
          -old (->fargs old)

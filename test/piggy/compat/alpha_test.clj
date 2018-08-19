@@ -5,7 +5,6 @@
             [clojure.test :refer :all]
             [piggy.compat.alpha :as compat]))
 
-
 ;; Example specs
 
 (s/def ::int int?)
@@ -31,6 +30,6 @@
 (deftest consistency-test
   (testing "Test conforming on the same spec gives the same answer."
     (let [same? (fn [[_ old new]] (= old new))]
-      (is (apply = true (map same? (compat/exercise-args `plus `plus 1000))))
-      (is (apply = true (map same? (compat/exercise-args ::old `plus 1000))))
-      (is (apply = true (map same? (compat/exercise-args `plus ::old 1000)))))))
+      (is (apply = true (map same? (compat/exercise `plus `plus 1000))))
+      (is (apply = true (map same? (compat/exercise ::old `plus 1000))))
+      (is (apply = true (map same? (compat/exercise `plus ::old 1000)))))))
