@@ -3,14 +3,23 @@
             [clojure.spec.gen.alpha :as sgen]
             [clojure.spec.test.alpha :as stest]
             [expound.alpha :as expound]))
+;; specs
+
+(s/def ::fargs (s/or :symbol qualified-symbol?
+                     :keyword qualified-keyword?
+                     :fspec s/spec?
+                     :regex s/regex?))
 
 ;; conformer specs
-(s/def ::fspec->args (s/and (s/conformer #(:args %)) some?))
-(s/def ::sym-or-kw->args (s/and (s/conformer s/get-spec) ::fspec->args))
-(s/def ::->args (s/or :symbol (s/and qualified-symbol? ::sym-or-kw->args)
-                      :keyword (s/and qualified-keyword? ::sym-or-kw->args)
-                      :fspec (s/and s/spec? ::fspec->args)
-                      :regex s/regex?))
+
+;; use conformers to resolve specs to the function arguments (fargs) and
+;; return ::s/invalid if not found
+(s/def ::fspec->fargs (s/and (s/conformer #(:args %)) some?))
+(s/def ::sym-or-kw->fargs (s/and (s/conformer s/get-spec) ::fspec->fargs))
+(s/def ::->fargs (s/or :symbol (s/and qualified-symbol? ::sym-or-kw->fargs)
+                       :keyword (s/and qualified-keyword? ::sym-or-kw->fargs)
+                       :fspec (s/and s/spec? ::fspec->fargs)
+                       :regex s/regex?))
 
 (s/fdef valid
   :args (s/cat :x any?)
@@ -21,9 +30,9 @@
   (when ((complement s/invalid?) x) x))
 
 (s/fdef exercise-args
-  :args (s/alt :default (s/cat :old ::->args, :new ::->args)
-               :n-samples (s/cat :old ::->args, :new ::->args, :n nat-int?)
-               :overrides (s/cat :old ::->args, :new ::->args,
+  :args (s/alt :default (s/cat :old ::fargs, :new ::fargs)
+               :n-samples (s/cat :old ::fargs, :new ::fargs, :n nat-int?)
+               :overrides (s/cat :old ::fargs, :new ::fargs,
                                  :n nat-int?, :overrides (s/nilable map?)))
   :ret (s/every vector?))
 (defn exercise-args
@@ -35,9 +44,9 @@
   ([old new] (exercise-args old new 10))
   ([old new n] (exercise-args old new n nil))
   ([old new n overrides]
-   (let [->args-spec #(when-let [[_ args] (valid (s/conform ::->args %))] args)
-         -old (->args-spec old)
-         -new (->args-spec new)]
+   (let [->fargs #(when-let [[_ args] (valid (s/conform ::->fargs %))] args)
+         -old (->fargs old)
+         -new (->fargs new)]
      (if (and -old -new)
        (map #(vector % (s/conform -old %) (s/conform -new %))
             (sgen/sample (s/gen -old overrides) n))
