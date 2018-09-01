@@ -78,6 +78,14 @@
 
    ~::old~ conform on the int values of ~::new~, but is invalid for doubles that ~::new~ generates.
 
+** Developers
+
+   Run Clojure unit tests with:
+
+   #+BEGIN_EXAMPLE
+     lein test
+   #+END_EXAMPLE
+
 ** License
 
    Copyright © 2018 Santiago Gepigon III
