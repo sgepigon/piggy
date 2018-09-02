@@ -2,11 +2,12 @@
 
 > “Ralph made a step forward and Jack smacked Piggy’s head. Piggy’s
 > glasses flew off and tinkled on the rocks. Piggy cried out in terror:
-> ‘My specs\! One side’s broken.” — William Golding, Lord of the
-> Flies, Chapter 4
+> ‘My specs\! One side’s broken.”
 
-`piggy` is a Clojure library that helps with *broken
-[specs](https://clojure.org/about/spec)*.
+— William Golding, *Lord of the Flies*, Chapter 4
+
+`piggy` is a Clojure library that helps with broken
+[specs](https://clojure.org/about/spec).
 
 ## Installation
 
