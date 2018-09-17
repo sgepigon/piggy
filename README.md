@@ -34,17 +34,18 @@ compatible:
 (defn- plus [x y] (+ x y))
 ```
 
-We can use `compat/exercise` to see how the our old and new specs
-compare.
+We can use `compat/exercise-fn-args` to see how the our old and new
+specs compare.
 
 ``` clojure
-(compat/exercise `plus ::new)
-(compat/exercise ::old ::new)
-(compat/exercise (s/cat :x ::int :y ::int) ::new)
+(compat/exercise-fn-args `plus ::new)
+(compat/exercise-fn-args ::old ::new)
+(compat/exercise-fn-args (s/cat :x ::int :y ::int) ::new)
 ```
 
-The three calls to `compat/exercise` above are equivalent and all return
-a sequence of `[val old-conformed-val new-conformed-val]` tuples, e.g.:
+The three calls to `compat/exercise-fn-args` above are equivalent and
+all return a sequence of `[val old-conformed-val new-conformed-val]`
+tuples, e.g.:
 
 ``` clojure
 ([(-1 0) {:x -1, :y 0} {:a -1, :b 0}]
@@ -66,7 +67,7 @@ To see what happens when specs are incompatible, let's switch the
 arguments:
 
 ``` clojure
-(compat/exercise ::new ::old)
+(compat/exercise-fn-args ::new ::old)
 ```
 
 ``` clojure

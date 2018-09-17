@@ -30,6 +30,6 @@
 (deftest consistency-test
   (testing "Test conforming on the same spec gives the same answer."
     (let [same? (fn [[_ old new]] (= old new))]
-      (is (apply = true (map same? (compat/exercise `plus `plus 1000))))
-      (is (apply = true (map same? (compat/exercise ::fn-int `plus 1000))))
-      (is (apply = true (map same? (compat/exercise `plus ::fn-int 1000)))))))
+      (is (apply = true (map same? (compat/exercise-fn-args `plus `plus 1000))))
+      (is (apply = true (map same? (compat/exercise-fn-args ::fn-int `plus 1000))))
+      (is (apply = true (map same? (compat/exercise-fn-args `plus ::fn-int 1000)))))))
