@@ -53,8 +53,8 @@
 ;; testing
 
 (deftest consistency-test
-  (testing "Test conforming on the same spec gives the same answer."
+  (testing "Test conforming on the same spec (same fn-args) gives the same answer."
     (let [same? (fn [[_ old new]] (= old new))]
-      (is (apply = true (map same? (compat/exercise-fn-args `plus `plus 1000))))
-      (is (apply = true (map same? (compat/exercise-fn-args ::fn-int `plus 1000))))
-      (is (apply = true (map same? (compat/exercise-fn-args `plus ::fn-int 1000)))))))
+      (is (every? same? (compat/exercise-fn-args `plus `plus 1000)))
+      (is (every? same? (compat/exercise-fn-args ::fn-int-arity-2 `plus 1000)))
+      (is (every? same? (compat/exercise-fn-args `plus ::fn-int-arity-2 1000))))))
