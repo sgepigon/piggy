@@ -9,8 +9,8 @@
 
 (s/def ::int int?)
 (s/def ::number number?)
-(s/def ::old (s/fspec :args (s/cat :x ::int :y ::int), :ret ::int))
-(s/def ::new (s/fspec :args (s/cat :x ::number :y ::number), :ret ::number))
+(s/def ::fn-int (s/fspec :args (s/cat :x ::int :y ::int), :ret ::int))
+(s/def ::fn-number (s/fspec :args (s/cat :x ::number :y ::number), :ret ::number))
 
 (s/fdef plus
   :args (s/cat :x ::int :y ::int)
@@ -21,7 +21,7 @@
   "Returns a generator for `::compat/fargs`"
   []
   (s/gen (s/or :symbol #{`plus `compat/valid}
-               :keyword #{::old ::new}
+               :keyword #{::fn-int ::fn-number}
                :fspec #{(s/fspec :args (s/* some?) :ret any?)}
                :regex #{(s/* any?)})))
 
@@ -31,5 +31,5 @@
   (testing "Test conforming on the same spec gives the same answer."
     (let [same? (fn [[_ old new]] (= old new))]
       (is (apply = true (map same? (compat/exercise `plus `plus 1000))))
-      (is (apply = true (map same? (compat/exercise ::old `plus 1000))))
-      (is (apply = true (map same? (compat/exercise `plus ::old 1000)))))))
+      (is (apply = true (map same? (compat/exercise ::fn-int `plus 1000))))
+      (is (apply = true (map same? (compat/exercise `plus ::fn-int 1000)))))))
