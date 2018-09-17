@@ -17,8 +17,8 @@
   :ret ::int)
 (defn- plus [x y] (+ x y))
 
-(defn- fargs-gen
-  "Returns a generator for `::compat/fargs`"
+(defn- fn-args-gen
+  "Returns a generator for `::compat/fn-args`"
   []
   (s/gen (s/or :symbol #{`plus `compat/valid}
                :keyword #{::fn-int ::fn-number}
