@@ -35,6 +35,13 @@
   :ret ::int)
 (defn- plus [x y] (+ x y))
 
+(s/fdef clojure.core/+
+  :args (s/alt :arity-0 ::arity-0
+               :number-arity-1 ::number-1-arity
+               :number-arity-2 ::number-2-arity
+               :number-variadic ::number-variadic)
+  :ret ::number)
+
 (defn- fn-args-gen
   "Returns a generator for `::compat/fn-args`"
   []
