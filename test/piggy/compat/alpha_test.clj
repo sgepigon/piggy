@@ -9,11 +9,29 @@
 
 (s/def ::int int?)
 (s/def ::number number?)
-(s/def ::fn-int (s/fspec :args (s/cat :x ::int :y ::int), :ret ::int))
-(s/def ::fn-number (s/fspec :args (s/cat :x ::number :y ::number), :ret ::number))
+
+(s/def ::arity-0 (s/cat))
+
+(s/def ::int-arity-1 (s/cat :x ::int))
+(s/def ::number-arity-1 (s/cat :x ::number))
+
+(s/def ::int-arity-2 (s/cat :x ::int :y ::int))
+(s/def ::number-arity-2 (s/cat :x ::number :y ::number))
+
+(s/def ::int-variadic (s/cat :x ::int :y ::int :more (s/* ::int)))
+(s/def ::number-variadic (s/cat :x ::number :y ::number :more (s/* ::number)))
+
+(s/def ::fn-int-arity-1 (s/fspec :args ::int-arity-1, :ret ::int))
+(s/def ::fn-number-arity-1 (s/fspec :args ::number-arity-1, :ret ::number))
+
+(s/def ::fn-int-arity-2 (s/fspec :args ::int-arity-2, :ret ::int))
+(s/def ::fn-number-arity-2 (s/fspec :args ::number-arity-2, :ret ::number))
+
+(s/def ::fn-int-variadic (s/fspec :args ::int-variadic, :ret ::int))
+(s/def ::fn-number-variadic (s/fspec :args ::number-variadic, :ret ::number))
 
 (s/fdef plus
-  :args (s/cat :x ::int :y ::int)
+  :args ::int-arity-2
   :ret ::int)
 (defn- plus [x y] (+ x y))
 
@@ -21,7 +39,7 @@
   "Returns a generator for `::compat/fn-args`"
   []
   (s/gen (s/or :symbol #{`plus `compat/valid}
-               :keyword #{::fn-int ::fn-number}
+               :keyword #{::fn-int-arity-2 ::fn-number-arity-2}
                :fspec #{(s/fspec :args (s/* some?) :ret any?)}
                :regex #{(s/* any?)})))
 
