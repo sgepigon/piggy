@@ -52,9 +52,42 @@
 
 ;; testing
 
+(defn- both-valid?
+  "Checks that both the `old` and `new` conformed values are valid."
+  [[_ old new]]
+  (and (not= ::s/invalid old) (not= ::s/invalid new)))
+
+(defn- breaking?
+  "Checks that the `new` conformed value is invalid."
+  [[_ _ new]]
+  (s/invalid? new))
+
 (deftest consistency-test
   (testing "Test conforming on the same spec (same fn-args) gives the same answer."
     (let [same? (fn [[_ old new]] (= old new))]
       (is (every? same? (compat/exercise-fn-args `plus `plus 1000)))
       (is (every? same? (compat/exercise-fn-args ::fn-int-arity-2 `plus 1000)))
       (is (every? same? (compat/exercise-fn-args `plus ::fn-int-arity-2 1000))))))
+
+(deftest relaxation-test
+  (testing "For function arguments, test that requiring less does not break the
+  spec."
+    (is (every? both-valid? (compat/exercise-fn-args ::fn-int-arity-2 ::fn-number-arity-2 1000))
+        "`::number-arity-2` is more general than `::int-arity-2`.")
+    (is (every? both-valid? (compat/exercise-fn-args ::fn-number-arity-2 ::fn-number-variadic 1000))
+        "`::number-variadic` is more general than `::number-arity-2`.")
+    (is (every? both-valid? (compat/exercise-fn-args ::fn-int-arity-2 ::fn-number-variadic 1000))
+        "`::number-variadic` is more general than `::int-arity-2`.")))
+
+(deftest accretion-test
+  (testing "For function return values, Test providing more does not break the spec."))
+
+(deftest breakage-test
+  (testing "For function arguments, test requiring more breaks the spec."
+    (is (some breaking? (compat/exercise-fn-args ::fn-number-arity-2 ::fn-int-arity-2 1000))
+        "`::int-arity-2` is narrower than `::number-arity-2`.")
+    (is (some breaking? (compat/exercise-fn-args ::fn-number-variadic ::fn-number-arity-2 1000))
+        "`::number-arity-2` is narrower than `::number-variadic`.")
+    (is (some breaking? (compat/exercise-fn-args ::fn-number-variadic ::fn-int-arity-2 1000))
+        "`::int-arity-2` is narrower than `::number-variadic`."))
+  (testing "For function return values, Test providing less breaks the spec."))
