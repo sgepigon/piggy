@@ -36,10 +36,7 @@
 (defn- plus [x y] (+ x y))
 
 (s/fdef clojure.core/+
-  :args (s/alt :arity-0 ::arity-0
-               :number-arity-1 ::number-1-arity
-               :number-arity-2 ::number-2-arity
-               :number-variadic ::number-variadic)
+  :args (s/* ::number)
   :ret ::number)
 
 (defn- fn-args-gen
