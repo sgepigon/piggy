@@ -76,7 +76,7 @@
         (sgen/frequency [[1 (gen* left)] [1 (gen* right)]])))
     ;; TODO how should overrides work?
     (with-gen* [_ gfn] (mapv #(s/with-gen* % gfn) [left right]))
-    (describe* [_] (mapv #(s/describe %) [left right]))))
+    (describe* [_] (list `pair (s/form left) (s/form right)))))
 
 (defmacro pair
   "TODO"
