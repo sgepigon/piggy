@@ -38,7 +38,7 @@
   conforms the `old` and `new` specs over them, returning a sequence of
   [val old-conformed-val new-conformed-val] tuples. For values that don't
   conform to `new`, new-conformed-val will be ::s/invalid. Optionally takes a
-  generator overrides map as per gen for `old`."
+  generator overrides map as per f for `old`."
   ([old new] (exercise-fn-args old new 10))
   ([old new n] (exercise-fn-args old new n nil))
   ([old new n overrides]
