@@ -2,12 +2,12 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as sgen]))
 
-(defn- ->pair
-  "Make a pair map."
+(defn- ->compat
+  "Make a compat map."
   [f old new]
   {:old (f old), :new (f new)})
 
-(defn pair-impl
+(defn compat-impl
   "TODO A spec wrapper."
   [left right]
   (reify
@@ -15,7 +15,7 @@
     (specize* [s] s)
     (specize* [s _] s)
     s/Spec
-    (conform* [_ x] (->pair #(s/conform* % x) left right))
+    (conform* [_ x] (->compat #(s/conform* % x) left right))
     ;; TODO how should it unform? Like s/cat? Cant's specize nil
     ;; Doesn't work with `::s/invalid`
     (unform* [_ x]
@@ -30,10 +30,11 @@
         (sgen/frequency [[1 (gen* left)] [1 (gen* right)]])))
     ;; TODO how should overrides work?
     (with-gen* [_ gfn] (mapv #(s/with-gen* % gfn) [left right]))
-    ;; (describe* [_] `(pair ~(s/form left) ~(s/form right)))
-    (describe* [_] (list `pair (s/form left) (s/form right)))))
+    ;; (describe* [_] `(compat ~(s/form left) ~(s/form right)))
+    (describe* [_] (list `compat (s/form left) (s/form right)))))
 
-(defmacro pair
+(defmacro compat
   "TODO"
   [left right]
-  `(piggy.compat.alpha/pair-impl (s/spec ~left) (s/spec ~right)))
+  `(piggy.compat.alpha/compat-impl (s/spec ~left) (s/spec ~right)))
+
