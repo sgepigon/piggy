@@ -2,10 +2,10 @@
   "Tools for interactive development with the REPL. This file should
   not be included in a production build of the application."
   (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as sgen]
-            [clojure.spec.test.alpha :as stest]
-            [expound.alpha :as expound]
-            [piggy.compat.alpha :as compat]))
+            [expound.alpha :as expound]))
+
+;; http://clojure-goes-fast.com/blog/performance-nemesis-reflection/
+(set! *warn-on-reflection* true)
 
 (alter-var-root #'s/*explain-out* (constantly (expound/custom-printer
                                                {:show-valid-values? true
