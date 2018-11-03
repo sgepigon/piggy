@@ -3,7 +3,7 @@
             [clojure.spec.gen.alpha :as sgen]))
 
 (defn compat-impl
-  "TODO A spec wrapper."
+  "TODO Do not call this directly, use `compat`."
   [old new]
   (reify
     s/Specize
