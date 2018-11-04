@@ -3,7 +3,7 @@
             [clojure.spec.gen.alpha :as sgen]))
 
 (defn compat-impl
-  "TODO Do not call this directly, use `compat`."
+  "Do not call this directly, use `compat`."
   [old new gfn]
   (let [specs {:old old :new new}]
     (reify
