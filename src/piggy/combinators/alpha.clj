@@ -4,7 +4,7 @@
 
 (defn compat-impl
   "TODO Do not call this directly, use `compat`."
-  [old new]
+  [old new gfn]
   (let [specs {:old old :new new}]
     (reify
       clojure.lang.ILookup
@@ -25,19 +25,19 @@
       (explain* [_ path via in x]
         ;; TODO Still need to figure out explain semantics
         (apply merge (mapv #(s/explain* % path via in x) [old new])))
-      ;; TODO how should overrides work?
       (gen* [_ overrides path rmap]
-        (let [gen* (fn [x] (s/gen* x overrides path rmap))]
-          (sgen/frequency [[1 (gen* old)] [1 (gen* new)]])))
-      ;; TODO how should overrides work?
-      (with-gen* [_ gfn] (mapv #(s/with-gen* % gfn) [old new]))
+        (if gfn
+          (gfn)
+          (sgen/frequency [[1 (s/gen* old overrides path rmap)]
+                           [1 (s/gen* new overrides path rmap)]])))
+      (with-gen* [_ gfn] (compat-impl old new gfn))
       (describe* [_] `(compat :old ~(s/form old) :new ~(s/form new))))))
 
 
 (s/fdef compat
-  :args (s/cat :kwargs (s/keys* :req-un [::old ::new])))
+  :args (s/cat :kwargs (s/keys* :req-un [::old ::new] :opt-un [::gen])))
 (defmacro compat
   "TODO"
-  [& {:keys [old new]}]
-  `(compat-impl (s/spec ~old) (s/spec ~new)))
+  [& {:keys [old new gen]}]
+  `(compat-impl (s/spec ~old) (s/spec ~new) ~gen))
 
