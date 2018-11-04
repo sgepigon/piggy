@@ -33,9 +33,8 @@
       (with-gen* [_ gfn] (compat-impl old new gfn))
       (describe* [_] `(compat :old ~(s/form old) :new ~(s/form new))))))
 
-
 (s/fdef compat
-  :args (s/cat :kwargs (s/keys* :req-un [::old ::new] :opt-un [::gen])))
+  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
 (defmacro compat
   "TODO"
   [& {:keys [old new gen]}]
