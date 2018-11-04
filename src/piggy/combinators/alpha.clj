@@ -17,14 +17,14 @@
 
       s/Spec
       (conform* [_ x] {:old (s/conform old x) :new (s/conform new x)})
-      ;; TODO how should it unform? Like s/cat? Cant's specize nil
-      ;; Doesn't work with `::s/invalid`
       (unform* [_ x]
-        (or (s/unform* old (first x))
-            (s/unform* new (second x))))
+        (if (s/invalid? (:old x))
+          (s/unform* new (:new x))
+          (s/unform* old (:old x))))
       (explain* [_ path via in x]
-        ;; TODO Still need to figure out explain semantics
-        (apply merge (mapv #(s/explain* % path via in x) [old new])))
+        (let [old-prob (s/explain* old (conj path :old) via in x)
+              new-prob (s/explain* new (conj path :new) via in x)]
+          (into old-prob new-prob)))
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
