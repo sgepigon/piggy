@@ -36,7 +36,11 @@
 (s/fdef compat
   :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
 (defmacro compat
-  "TODO"
+  "Takes `:old` and `:new` kwargs whose values are predicates or specs and returns
+  a spec that returns a map of the `:old` and `:new` conformed values.
+
+  Optionally takes `:gen` generator-fn, which must be a fn of no args that returns
+  a test.check generator."
   [& {:keys [old new gen]}]
   `(compat-impl (s/spec ~old) (s/spec ~new) ~gen))
 
