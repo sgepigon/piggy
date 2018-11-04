@@ -8,7 +8,7 @@
   (let [specs {:old old :new new}]
     (reify
       clojure.lang.ILookup
-      (valAt [this k] (get specs k))
+      (valAt [_ k] (get specs k))
       (valAt [_ k not-found] (get specs k not-found))
 
       s/Specize
