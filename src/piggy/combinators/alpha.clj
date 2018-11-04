@@ -27,6 +27,8 @@
     (with-gen* [_ gfn] (mapv #(s/with-gen* % gfn) [old new]))
     (describe* [_] `(compat :old ~(s/form old) :new ~(s/form new)))))
 
+(s/fdef compat
+  :args (s/cat :kwargs (s/keys* :req-un [::old ::new])))
 (defmacro compat
   "TODO"
   [& {:keys [old new]}]
