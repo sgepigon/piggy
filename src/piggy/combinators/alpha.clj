@@ -3,15 +3,20 @@
             [clojure.spec.gen.alpha :as sgen]))
 
 (s/fdef compat
-  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
+  :args (s/keys* :req-un [::old ::new] :opt-un [::gen ::frequency]))
 (defmacro compat
   "Takes `:old` and `:new` kwargs whose values are predicates or specs and returns
   a spec that returns a map of the `:old` and `:new` conformed values.
 
-  Optionally takes `:gen` generator-fn, which must be a fn of no args that returns
-  a test.check generator."
-  [& {:keys [old new gen]}]
-  `(compat-impl (s/spec ~old) (s/spec ~new) ~gen))
+  Optionally takes `:gen` generator-fn or `:frequency` likelihood map.
+
+  `:gen` generator-fn must be a fn of no args that returns a test.check generator.
+
+  `:frequency` must be a map with integer likelihoods for generating `:old` and
+  `:new` (default {:old 1 :new 1}). The likelihood of a given generator being
+  chosen is its likelihood divided by the sum of all likelihoods."
+  [& {:keys [old new gen frequency] :or {frequency {:old 1 :new 1}}}]
+  `(compat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
 (s/fdef fcompat
   :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
@@ -22,7 +27,7 @@
 
 (defn compat-impl
   "Do not call this directly, use `compat`."
-  [old new gfn]
+  [old new gfn frequency]
   (let [specs {:old old :new new}]
     (reify
       clojure.lang.ILookup
@@ -46,8 +51,8 @@
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
-          (sgen/frequency [[1 (s/gen* old overrides path rmap)]
-                           [1 (s/gen* new overrides path rmap)]])))
+          (sgen/frequency [[(:old frequency) (s/gen* old overrides path rmap)]
+                           [(:new frequency) (s/gen* new overrides path rmap)]])))
       (with-gen* [_ gfn] (compat-impl old new gfn))
       (describe* [_] `(compat :old ~(s/form old) :new ~(s/form new))))))
 
