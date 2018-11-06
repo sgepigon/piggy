@@ -58,14 +58,14 @@
       (specize* [s _] s)
 
       s/Spec
-      (conform* [_ x] {:old (s/conform old x) :new (s/conform new x)})
-      (unform* [_ x]
-        (if (s/invalid? (:old x))
-          (s/unform* new (:new x))
-          (s/unform* old (:old x))))
-      (explain* [_ path via in x]
-        (let [old-prob (s/explain* old (conj path :old) via in x)
-              new-prob (s/explain* new (conj path :new) via in x)]
+      (conform* [_ f] {:old (s/conform old f) :new (s/conform new f)})
+      (unform* [_ f]
+        (if (s/invalid? (:old f))
+          (s/unform* new (:new f))
+          (s/unform* old (:old f))))
+      (explain* [_ path via in f]
+        (let [old-prob (s/explain* old (conj path :old) via in f)
+              new-prob (s/explain* new (conj path :new) via in f)]
           (into old-prob new-prob)))
       (gen* [_ overrides path rmap]
         (if gfn
