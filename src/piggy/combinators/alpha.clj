@@ -2,6 +2,24 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as sgen]))
 
+(s/fdef compat
+  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
+(defmacro compat
+  "Takes `:old` and `:new` kwargs whose values are predicates or specs and returns
+  a spec that returns a map of the `:old` and `:new` conformed values.
+
+  Optionally takes `:gen` generator-fn, which must be a fn of no args that returns
+  a test.check generator."
+  [& {:keys [old new gen]}]
+  `(compat-impl (s/spec ~old) (s/spec ~new) ~gen))
+
+(s/fdef fcompat
+  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
+(defmacro fcompat
+  "TODO"
+  [& {:keys [old new gen]}]
+  `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen))
+
 (defn compat-impl
   "Do not call this directly, use `compat`."
   [old new gfn]
@@ -32,17 +50,6 @@
                            [1 (s/gen* new overrides path rmap)]])))
       (with-gen* [_ gfn] (compat-impl old new gfn))
       (describe* [_] `(compat :old ~(s/form old) :new ~(s/form new))))))
-
-(s/fdef compat
-  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
-(defmacro compat
-  "Takes `:old` and `:new` kwargs whose values are predicates or specs and returns
-  a spec that returns a map of the `:old` and `:new` conformed values.
-
-  Optionally takes `:gen` generator-fn, which must be a fn of no args that returns
-  a test.check generator."
-  [& {:keys [old new gen]}]
-  `(compat-impl (s/spec ~old) (s/spec ~new) ~gen))
 
 (defn fcompat-impl
   "TODO"
@@ -75,10 +82,4 @@
       (with-gen* [_ gfn] (compat-impl old new gfn))
       (describe* [_] `(fcompat :old ~(s/form old) :new ~(s/form new))))))
 
-(s/fdef fcompat
-  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
-(defmacro fcompat
-  "TODO"
-  [& {:keys [old new gen]}]
-  `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen))
 
