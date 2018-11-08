@@ -25,6 +25,19 @@
   [& {:keys [old new gen]}]
   `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen))
 
+(defn- validate
+  "Validate a conformed `compat` map.
+
+  Return `::s/invalid` for breaking changes, otherwise return the conformed
+  `compat` map."
+  [conformed]
+  (s/assert (s/keys :req-un [::old ::new]) conformed)
+  (case (map (complement s/invalid?) ((juxt :old :new) conformed))
+    [true true] conformed
+    [true false] ::s/invalid
+    [false true] conformed
+    [false false] ::s/invalid))
+
 (defn compat-impl
   "Do not call this directly, use `compat`."
   [old new gfn frequency]
@@ -39,7 +52,7 @@
       (specize* [s _] s)
 
       s/Spec
-      (conform* [_ x] {:old (s/conform old x) :new (s/conform new x)})
+      (conform* [_ x] (validate {:old (s/conform old x) :new (s/conform new x)}))
       (unform* [_ x]
         (if (s/invalid? (:old x))
           (s/unform* new (:new x))
