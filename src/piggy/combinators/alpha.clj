@@ -91,12 +91,9 @@
       (specize* [s _] s)
 
       s/Spec
-      (conform* [_ f] {:old (s/conform old f) :new (s/conform new f)})
-      (unform* [_ f]
-        (if (s/invalid? (:old f))
-          (s/unform* new (:new f))
-          (s/unform* old (:old f))))
       ;; TODO conform*
+      (conform* [_ f] {:old (s/conform old f) :new (s/conform new f)})
+      (unform* [_ f] f)
       ;; TODO explain*
       (explain* [_ path via in f]
         (let [old-prob (s/explain* old (conj path :old) via in f)
@@ -108,7 +105,8 @@
           (gfn)
           (sgen/frequency [[1 (s/gen* old overrides path rmap)]
                            [1 (s/gen* new overrides path rmap)]])))
-      (with-gen* [_ gfn] (compat-impl old new gfn))
-      (describe* [_] `(fcompat :old ~(s/form old) :new ~(s/form new))))))
 
 
+      (with-gen* [_ gfn] (fcompat-impl old new gfn))
+      (describe* [_] `(fcompat :old ~(when old (s/describe* old))
+                               :new ~(when new (s/describe* new)))))))
