@@ -2,6 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as sgen]))
 
+;;;; Combinator Macros
+
 (s/fdef compat
   :args (s/keys* :req-un [::old ::new] :opt-un [::gen ::frequency]))
 (defmacro compat
@@ -24,6 +26,10 @@
   "TODO"
   [& {:keys [old new gen]}]
   `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen))
+
+;;;; Implementations
+
+;; `compat` implementation
 
 (defn- validate
   "Validate a conformed `compat` map.
@@ -70,6 +76,7 @@
       (describe* [_] `(compat :old ~(when old (s/describe* old))
                               :new ~(when new (s/describe* new)))))))
 
+;; `fcompat` implementation
 (defn fcompat-impl
   "Do not call this directly, use `fcompat`."
   [old new gfn]
@@ -89,10 +96,13 @@
         (if (s/invalid? (:old f))
           (s/unform* new (:new f))
           (s/unform* old (:old f))))
+      ;; TODO conform*
+      ;; TODO explain*
       (explain* [_ path via in f]
         (let [old-prob (s/explain* old (conj path :old) via in f)
               new-prob (s/explain* new (conj path :new) via in f)]
           (into old-prob new-prob)))
+      ;; TODO gen*
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
