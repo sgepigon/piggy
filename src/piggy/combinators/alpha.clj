@@ -52,7 +52,7 @@
       (specize* [s _] s)
 
       s/Spec
-      (conform* [_ x] (validate {:old (s/conform old x) :new (s/conform new x)}))
+      (conform* [_ x] (validate {:old (s/conform* old x) :new (s/conform* new x)}))
       (unform* [_ x]
         (if (s/invalid? (:old x))
           (s/unform* new (:new x))
@@ -67,7 +67,8 @@
           (sgen/frequency [[(:old frequency) (s/gen* old overrides path rmap)]
                            [(:new frequency) (s/gen* new overrides path rmap)]])))
       (with-gen* [_ gfn] (compat-impl old new gfn))
-      (describe* [_] `(compat :old ~(s/form old) :new ~(s/form new))))))
+      (describe* [_] `(compat :old ~(when old (s/describe* old))
+                              :new ~(when new (s/describe* new)))))))
 
 (defn fcompat-impl
   "TODO"
