@@ -21,11 +21,11 @@
   `(compat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
 (s/fdef fcompat
-  :args (s/keys* :req-un [::old ::new] :opt-un [::gen]))
+  :args (s/keys* :req-un [::old ::new] :opt-un [::gen ::frequency]))
 (defmacro fcompat
   "TODO"
-  [& {:keys [old new gen]}]
-  `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen))
+  [& {:keys [old new gen frequency] :or {frequency {:old 1 :new 1}}}]
+  `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
 ;;;; Implementations
 
@@ -90,7 +90,7 @@
 
 (defn fcompat-impl
   "Do not call this directly, use `fcompat`."
-  [old new gfn]
+  [old new gfn frequency]
   (let [specs {:old old :new new
                :args (k->compat :args old new)
                :ret (k->compat :ret old new)
@@ -113,14 +113,13 @@
         (let [old-prob (s/explain* old (conj path :old) via in f)
               new-prob (s/explain* new (conj path :new) via in f)]
           (into old-prob new-prob)))
-      ;; TODO gen*
-      (gen* [_ overrides path rmap]
+      (gen* [_ overrides _ _]
         (if gfn
           (gfn)
-          (sgen/frequency [[1 (s/gen* old overrides path rmap)]
-                           [1 (s/gen* new overrides path rmap)]])))
-
-
-      (with-gen* [_ gfn] (fcompat-impl old new gfn))
+          (sgen/return
+           (fn [& args]
+             (assert (s/valid? (:args specs) args) (with-out-str (s/explain (:args specs) args)))
+             (sgen/generate (s/gen (:ret specs) overrides))))))
+      (with-gen* [_ gfn] (fcompat-impl old new gfn frequency))
       (describe* [_] `(fcompat :old ~(when old (s/describe* old))
                                :new ~(when new (s/describe* new)))))))
