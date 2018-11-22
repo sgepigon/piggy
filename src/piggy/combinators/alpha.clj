@@ -71,7 +71,7 @@
                               :new ~(when new (s/describe* new)))))))
 
 (defn fcompat-impl
-  "TODO"
+  "Do not call this directly, use `fcompat`."
   [old new gfn]
   (let [specs {:old old :new new}]
     (reify
