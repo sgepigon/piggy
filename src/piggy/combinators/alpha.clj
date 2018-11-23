@@ -66,7 +66,7 @@
           (gfn)
           (sgen/frequency [[(:old frequency) (s/gen* old overrides path rmap)]
                            [(:new frequency) (s/gen* new overrides path rmap)]])))
-      (with-gen* [_ gfn] (compat-impl old new gfn))
+      (with-gen* [_ gfn] (compat-impl old new gfn frequency))
       (describe* [_] `(compat :old ~(when old (s/describe* old))
                               :new ~(when new (s/describe* new)))))))
 
