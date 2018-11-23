@@ -78,23 +78,25 @@
 
 ;; `fcompat` implementation
 
-(defn- k->compat
-  "Return a `compat` spec from a keyword `k` (:args, :ret, or :fn) and fspecs
-  `old` and `new`."
-  [k old new]
+(defn- compatize
+  "Return a `compat` spec from a keyword `k` (:args, :ret, or :fn) in fspecs
+  `old`and `new`. If neither `old` or `new` have a spec for `k`, return nil."
+  [old new frequency k]
   (case [(some? (k old)) (some? (k new))]
-    [true true] (compat :old (k old) :new (k new))
-    [true false] (compat :old (k old) :new nil)
-    [false true] (compat :old nil :new (k new))
+    [true true] (compat :old (k old) :new (k new) :frequency frequency)
+    [true false] (compat :old (k old) :frequency frequency)
+    [false true] (compat :new (k new) :frequency frequency)
     [false false] nil))
 
 (defn fcompat-impl
   "Do not call this directly, use `fcompat`."
   [old new gfn frequency]
-  (let [specs {:old old :new new
-               :args (k->compat :args old new)
-               :ret (k->compat :ret old new)
-               :fn (k->compat :fn old new)}]
+  (let [compatize-kw (partial compatize old new frequency)
+        specs {:old old
+               :new new
+               :args (compatize-kw :args)
+               :ret (compatize-kw :ret)
+               :fn (compatize-kw :fn)}]
     (reify
       clojure.lang.ILookup
       (valAt [_ k] (get specs k))
