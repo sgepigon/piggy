@@ -4,8 +4,6 @@
 
 ;;;; Combinator Macros
 
-(s/fdef compat
-  :args (s/keys* :req-un [::old ::new] :opt-un [::gen ::frequency]))
 (defmacro compat
   "Takes `:old` and `:new` kwargs whose values are predicates or specs and returns
   a spec that returns a map of the `:old` and `:new` conformed values.
@@ -20,8 +18,6 @@
   [& {:keys [old new gen frequency] :or {frequency {:old 1 :new 1}}}]
   `(compat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
-(s/fdef fcompat
-  :args (s/keys* :req-un [::old ::new] :opt-un [::gen ::frequency]))
 (defmacro fcompat
   "TODO"
   [& {:keys [old new gen frequency] :or {frequency {:old 1 :new 1}}}]
@@ -37,7 +33,6 @@
   Return `::s/invalid` for breaking changes, otherwise return the conformed
   `compat` map."
   [conformed]
-  (s/assert (s/keys :req-un [::old ::new]) conformed)
   (case (map (complement s/invalid?) ((juxt :old :new) conformed))
     [true true] conformed
     [true false] ::s/invalid
