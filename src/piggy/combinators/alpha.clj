@@ -86,6 +86,34 @@
     [false true] (compat :new (k new) :frequency frequency)
     [false false] nil))
 
+(defn- call-valid?
+  "Returns true if `f` and `args` are valid for `specs`, otherwise returns falsey.
+
+  See `s/call-valid?`."
+  [f specs args]
+  (let [cargs (s/conform (:args specs) args)]
+    (when-not (s/invalid? cargs)
+      (let [ret (apply f args)
+            cret (s/conform (:ret specs) ret)]
+        (and (not (s/invalid? cret))
+             (if (:fn specs)
+               (s/valid? (:fn specs) {:args cargs :ret cret})
+               true))))))
+
+(defn- validate-fn
+  "Returns `f` if valid for `specs`, else the smallest shrunk.
+
+  See `s/validate-fn`."
+  [f specs iters]
+  ;; Use `s/gen*` because `s/gen` suppresses invalid generated values. To test
+  ;; the args spec, we need to pass potentially invalid values.
+  (let [g (s/gen* (:args specs) nil [] {::s/recursion-limit s/*recursion-limit*})
+        prop (sgen/for-all* [g] #(call-valid? f specs %))]
+    (let [ret (sgen/quick-check iters prop)]
+      (if-let [[smallest] (-> ret :shrunk :smallest)]
+        smallest
+        f))))
+
 (defn fcompat-impl
   "Do not call this directly, use `fcompat`."
   [old new gfn frequency]
@@ -105,8 +133,12 @@
       (specize* [s _] s)
 
       s/Spec
-      ;; TODO conform*
-      (conform* [_ f] {:old (s/conform old f) :new (s/conform new f)})
+      (conform* [this f]
+        (if (:args specs)
+          (if (ifn? f)
+            (if (identical? f (validate-fn f specs s/*fspec-iterations*)) f ::s/invalid)
+            ::s/invalid)
+          (throw (Exception. (str "Can't conform fcompat without args spec in both :old and :new fspecs: \n" (pr-str (s/describe this)))))))
       (unform* [_ f] f)
       ;; TODO explain*
       (explain* [_ path via in f]
