@@ -55,13 +55,16 @@
       s/Spec
       (conform* [_ x] (validate {:old (s/conform* old x) :new (s/conform* new x)}))
       (unform* [_ x]
-        (if (s/invalid? (:old x))
-          (s/unform* new (:new x))
-          (s/unform* old (:old x))))
+        ;; Use `s/invalid?` for speed and to avoid making an implicit call to
+        ;; `s/conform*` in `s/valid?`.
+        (cond
+          (s/invalid? x) x
+          (s/invalid? (:old x)) (s/unform* new (:new x))
+          :else (s/unform* old (:old x))))
       (explain* [_ path via in x]
         (let [old-prob (s/explain* old (conj path :old) via in x)
               new-prob (s/explain* new (conj path :new) via in x)]
-          (into old-prob new-prob)))
+          ((fnil into []) old-prob new-prob)))
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
