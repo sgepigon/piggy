@@ -2,6 +2,15 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as sgen]))
 
+(def ^:dynamic *fcompat-iterations*
+  "The number of times an anonymous fn specified by `fcompat` will
+  be (generatively) tested during `s/explain`.
+
+  The default number of times (100) is the the same as `s/fspec` for
+  `s/explain`. Use `s/*fspec-iterations*` to control testing during
+  `s/conform`."
+  100)
+
 ;;;; Combinator Macros
 
 (defmacro compat
@@ -114,6 +123,39 @@
         smallest
         f))))
 
+(defn- spec-name
+  "If `spec` has a name, return it, otherwise nil.
+
+  See `s/spec-name`."
+  [spec]
+  (cond
+    (ident? spec) spec
+    (s/regex? spec) (::s/name spec)
+    (instance? clojure.lang.IObj spec) (::s/name (meta spec))))
+
+(defn- deep-resolve
+  "Resolve a `pred` to a spec/regex.
+
+  See `s/deep-resolve`."
+  [pred]
+  (if (ident? pred)
+    (recur (s/get-spec pred))
+    pred))
+
+(defn- explain
+  "Return a collection of `s/explain` problems, which is a map with at least keys
+  `:path`, `:pred`, `:val`, `:via`, and `:in`.
+
+  See `s/explain-1`."
+  ([spec path via in v]
+   (explain nil spec path via in v))
+  ([form pred path via in v]
+   ;; try and resolve `pred` to a spec
+   (let [pred (or (deep-resolve pred) (s/spec? pred) (s/regex? pred))]
+     (if (s/spec? pred)
+       (s/explain* pred path (if-let [name (spec-name pred)] (conj via name) via) in v)
+       [{:path path :pred form :val v :via via :in in}]))))
+
 (defn fcompat-impl
   "Do not call this directly, use `fcompat`."
   [old new gfn frequency]
@@ -142,9 +184,23 @@
       (unform* [_ f] f)
       ;; TODO explain*
       (explain* [_ path via in f]
-        (let [old-prob (s/explain* old (conj path :old) via in f)
-              new-prob (s/explain* new (conj path :new) via in f)]
-          (into old-prob new-prob)))
+        (if (ifn? f)
+          (let [args (validate-fn f specs *fcompat-iterations*)]
+            ;; return nil on success. Like `s/fspec`, might not be reproducible.
+            (when-not (identical? f args)
+              (let [cargs (s/conform (:args specs) args)]
+                (if (s/invalid? cargs)
+                  (explain (:args specs) (conj path :args) via in args)
+                  (let [ret (try (apply f args) (catch Throwable t t))]
+                    (if (instance? Throwable ret)
+                      ;; When `s/fspec` adds exception data, add exception data.
+                      [{:path path :pred '(apply fn) :val args :via via :in in :reason (.getMessage ^Throwable ret)}]
+                      (let [cret (s/conform (:ret specs) ret)]
+                        (if (s/invalid? cret)
+                          (explain (:ret specs) (conj path :ret) via in ret)
+                          (when (:fn specs)
+                            (explain (:fn specs) (conj path :fn) via in {:args cargs :ret cret}))))))))))
+          (explain 'ifn? ifn? path via in f)))
       (gen* [_ overrides _ _]
         (if gfn
           (gfn)
