@@ -28,7 +28,17 @@
   `(compat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
 (defmacro fcompat
-  "TODO"
+  "Takes `:old` and `:new` kwargs whose values are fspecs and returns a spec whose
+  `s/conform` or `s/explain` take a fn and validates compatibility between
+  `:old` and `:new` using generative testing. The conformed value is always the
+  fn itself.
+
+  fcompats can generate functions that validate the arguments for compatibility
+  and fabricate a return value compliant with the `compat` :ret spec, ignoring
+  the `compat` :fn spec if present.
+
+  Optionally takes `:gen` generator-fn or `:frequency` likelihood map. See
+  `compat` a full description of `:gen` and `:frequency`."
   [& {:keys [old new gen frequency] :or {frequency {:old 1 :new 1}}}]
   `(fcompat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
@@ -134,7 +144,7 @@
     (instance? clojure.lang.IObj spec) (::s/name (meta spec))))
 
 (defn- deep-resolve
-  "Resolve a `pred` to a spec/regex.
+  "Resolve `pred` to a spec/regex.
 
   See `s/deep-resolve`."
   [pred]
