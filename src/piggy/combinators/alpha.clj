@@ -144,13 +144,13 @@
     (instance? clojure.lang.IObj spec) (::s/name (meta spec))))
 
 (defn- deep-resolve
-  "Resolve `pred` to a spec/regex.
+  "Resolve `sym-or-k` to a spec/regex.
 
   See `s/deep-resolve`."
-  [pred]
-  (if (ident? pred)
-    (recur (s/get-spec pred))
-    pred))
+  [sym-or-k]
+  (if (ident? sym-or-k)
+    (recur (s/get-spec sym-or-k))
+    sym-or-k))
 
 (defn- explain
   "Return a collection of `s/explain` problems, which is a map with at least keys
@@ -160,8 +160,8 @@
   ([spec path via in v]
    (explain nil spec path via in v))
   ([form pred path via in v]
-   ;; try and resolve `pred` to a spec
-   (let [pred (or (deep-resolve pred) (s/spec? pred) (s/regex? pred))]
+   ;; try to resolve `pred` to a spec, otherwise return nil. See `s/maybe-spec`.
+   (let [pred (or (deep-resolve pred) (s/spec? pred) (s/regex? pred) nil)]
      (if (s/spec? pred)
        (s/explain* pred path (if-let [name (spec-name pred)] (conj via name) via) in v)
        [{:path path :pred form :val v :via via :in in}]))))
@@ -192,7 +192,6 @@
             ::s/invalid)
           (throw (Exception. (str "Can't conform fcompat without args spec in both :old and :new fspecs: \n" (pr-str (s/describe this)))))))
       (unform* [_ f] f)
-      ;; TODO explain*
       (explain* [_ path via in f]
         (if (ifn? f)
           (let [args (validate-fn f specs *fcompat-iterations*)]
