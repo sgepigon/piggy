@@ -47,16 +47,9 @@
 ;; `compat` implementation
 
 (defn- validate
-  "Validate a conformed `compat` map.
-
-  Return `::s/invalid` for breaking changes, otherwise return the conformed
-  `compat` map."
-  [conformed]
-  (case (map (complement s/invalid?) ((juxt :old :new) conformed))
-    [true true] conformed
-    [true false] ::s/invalid
-    [false true] conformed
-    [false false] ::s/invalid))
+  "Return `::s/invalid` for breaking changes, otherwise return `conformed`."
+  [{:keys [new] :as conformed}]
+  (if (s/invalid? new) new conformed))
 
 (defn compat-impl
   "Do not call this directly, use `compat`."
@@ -73,13 +66,7 @@
 
       s/Spec
       (conform* [_ x] (validate {:old (s/conform* old x) :new (s/conform* new x)}))
-      (unform* [_ x]
-        ;; Use `s/invalid?` for speed and to avoid making an implicit call to
-        ;; `s/conform*` in `s/valid?`.
-        (cond
-          (s/invalid? x) x
-          (s/invalid? (:old x)) (s/unform* new (:new x))
-          :else (s/unform* old (:old x))))
+      (unform* [_ x] (if (s/invalid? x) x (s/unform* new (:new x))))
       (explain* [_ path via in x]
         (let [old-prob (s/explain* old (conj path :old) via in x)
               new-prob (s/explain* new (conj path :new) via in x)]
@@ -99,7 +86,7 @@
   "Return a `compat` spec from a keyword `k` (:args, :ret, or :fn) in fspecs
   `old`and `new`. If neither `old` or `new` have a spec for `k`, return nil."
   [old new frequency k]
-  (case [(some? (k old)) (some? (k new))]
+  (case (map (comp some? k) [old new])
     [true true] (compat :old (k old) :new (k new) :frequency frequency)
     [true false] (compat :old (k old) :frequency frequency)
     [false true] (compat :new (k new) :frequency frequency)
