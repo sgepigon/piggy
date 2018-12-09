@@ -15,76 +15,74 @@ Download from <https://github.com/sgepigon/piggy>.
 
 ## Usage
 
-Let's say we have a spec'ed function and we want to see if a new spec is
+Let's say we're writing a spec for `clojure.core/+`. We might start out
+like this:
+
+``` clojure
+(ns piggy.readme
+  (:require [clojure.spec.alpha :as s]
+            [piggy.combinators.alpha :as pc]))
+
+(+ 1 2) ; => 3
+(s/def ::int-fn (s/fspec :args (s/cat :x int? :y int?) :ret int?))
+(s/conform (s/get-spec ::int-fn) +) ; => #function[clojure.core/+]
+```
+
+We soon realize that we forgot that `clojure.core/+` also works over
+other numbers.
+
+``` clojure
+(+ 1.5 2.5) ; => 4.0
+(+ 1/2 3/4) ; => 5/4
+```
+
+We update our spec
+accordingly:
+
+``` clojure
+(s/def ::number-fn (s/fspec :args (s/cat :x number? :y number?) :ret number?))
+(s/conform (s/get-spec ::number-fn) +) ; => #function[clojure.core/+]
+```
+
+How do we know change isn't a *breaking change*? `fcompat` is a spec
+combinator that encodes a compatibility property between two specs.
+`fcompat` is a spec itself, so the same functions that work on
+`clojure.spec` specs (`s/conform`, `s/unform`, `s/explain`, `s/gen`,
+`s/with-gen`, and `s/describe`) work on `compat` and
+`fcompat`.
+
+``` clojure
+(s/conform (pc/fcompat :old ::int-fn :new ::number-fn) +) ; => #function[clojure.core/+]
+
+;; If we switch `:old` and `:new` we get a breaking change (i.e. we require more and provide less)
+(s/conform (pc/fcompat :new ::int-fn :old ::number-fn) +) ; => :clojure.spec.alpha/invalid
+(s/explain (pc/fcompat :new ::int-fn :old ::number-fn) +)
+;; => 1.0 - failed: int? in: [0] at: [:args :new :x]
+```
+
+But wait\! We also forgot `clojure.core/+` is variadic:
+
+``` clojure
+(+) ; => 0
+(+ 1.0) ; => 1.0
+(+ 0 1 2 3 4 5 6 7 8 9) ; => 45
+```
+
+Let's update our spec again and see if it's
 compatible:
 
 ``` clojure
-(ns piggy.compat.readme
-  (:require [clojure.spec.alpha :as s]
-            [piggy.compat.alpha :as compat]))
+(s/def ::variadic-number-fn (s/fspec :args (s/* number?) :ret number?)) ; variadic
+(s/conform (s/get-spec ::variadic-number-fn) +) ; => #function[clojure.core/+]
 
-(s/def ::int int?)
-(s/def ::number number?)
-(s/def ::old (s/fspec :args (s/cat :x ::int :y ::int), :ret ::int))
-(s/def ::new (s/fspec :args (s/cat :a ::number :b ::number), :ret ::number))
 
-(s/fdef plus
-  :args (s/cat :x ::int :y ::int)
-  :ret ::int)
-(defn- plus [x y] (+ x y))
+(s/conform (pc/fcompat :old ::number-fn :new ::variadic-number-fn) +) ; => #function[clojure.core/+]
+
+;; Again, switching `:old` and `:new` gives us a breaking change
+(s/conform (pc/fcompat :new ::number-fn :old ::variadic-number-fn) +) ; => :clojure.spec.alpha/invalid
+(s/explain (pc/fcompat :new ::number-fn :old ::variadic-number-fn) +)
+;; => () - failed: Insufficient input at: [:args :new :x]
 ```
-
-We can use `compat/exercise-fn-args` to see how the our old and new
-specs compare.
-
-``` clojure
-(compat/exercise-fn-args `plus ::new)
-(compat/exercise-fn-args ::old ::new)
-(compat/exercise-fn-args (s/cat :x ::int :y ::int) ::new)
-```
-
-The three calls to `compat/exercise-fn-args` above are equivalent and
-all return a sequence of `[val old-conformed-val new-conformed-val]`
-tuples, e.g.:
-
-``` clojure
-([(-1 0) {:x -1, :y 0} {:a -1, :b 0}]
- [(0 0) {:x 0, :y 0} {:a 0, :b 0}]
- [(-1 0) {:x -1, :y 0} {:a -1, :b 0}]
- [(-1 -2) {:x -1, :y -2} {:a -1, :b -2}]
- [(-4 1) {:x -4, :y 1} {:a -4, :b 1}]
- [(-1 1) {:x -1, :y 1} {:a -1, :b 1}]
- [(-13 -1) {:x -13, :y -1} {:a -13, :b -1}]
- [(6 58) {:x 6, :y 58} {:a 6, :b 58}]
- [(1 3) {:x 1, :y 3} {:a 1, :b 3}]
- [(0 0) {:x 0, :y 0} {:a 0, :b 0}])
-```
-
-We see that the new spec is compatible because `::number` subsumes
-`::int`.
-
-To see what happens when specs are incompatible, let's switch the
-arguments:
-
-``` clojure
-(compat/exercise-fn-args ::new ::old)
-```
-
-``` clojure
-([(-1 -1) {:a -1, :b -1} {:x -1, :y -1}]
- [(-1.0 -2.0) {:a -1.0, :b -2.0} :clojure.spec.alpha/invalid]
- [(0 0.5) {:a 0, :b 0.5} :clojure.spec.alpha/invalid]
- [(2 -4) {:a 2, :b -4} {:x 2, :y -4}]
- [(0.625 -3) {:a 0.625, :b -3} :clojure.spec.alpha/invalid]
- [(15 0.0) {:a 15, :b 0.0} :clojure.spec.alpha/invalid]
- [(1.5 0.5) {:a 1.5, :b 0.5} :clojure.spec.alpha/invalid]
- [(0.765625 -0.5) {:a 0.765625, :b -0.5} :clojure.spec.alpha/invalid]
- [(12 -3) {:a 12, :b -3} {:x 12, :y -3}]
- [(1.9375 0) {:a 1.9375, :b 0} :clojure.spec.alpha/invalid])
-```
-
-`::old` conform on the int values of `::new`, but is invalid for doubles
-that `::new` generates.
 
 ## Developers
 
