@@ -6,8 +6,3 @@
 
 ;; http://clojure-goes-fast.com/blog/performance-nemesis-reflection/
 (set! *warn-on-reflection* true)
-
-(alter-var-root #'s/*explain-out* (constantly (expound/custom-printer
-                                               {:show-valid-values? true
-                                                :print-specs? false
-                                                :theme :figwheel-theme})))
