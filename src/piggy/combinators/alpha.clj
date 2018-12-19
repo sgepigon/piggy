@@ -19,7 +19,8 @@
 
   Optionally takes `:gen` generator-fn or `:frequency` likelihood map.
 
-  `:gen` generator-fn must be a fn of no args that returns a test.check generator.
+  `:gen` generator-fn must be a fn of no args that returns a test.check
+  generator.
 
   `:frequency` must be a map with integer likelihoods for generating `:old` and
   `:new` (default {:old 1 :new 1}). The likelihood of a given generator being
