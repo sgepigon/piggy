@@ -3,7 +3,7 @@
   :url "https://github.com/sgepigon/piggy"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0"]]
+  :dependencies [[org.clojure/clojure "1.10.1"]]
   :profiles {:dev {:source-paths ["dev"]
-                   :dependencies [[expound "0.7.1"]
-                                  [org.clojure/test.check "0.9.0"]]}})
+                   :dependencies [[expound "0.7.2"]
+                                  [org.clojure/test.check "0.10.0"]]}})

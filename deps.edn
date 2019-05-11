@@ -1,0 +1,17 @@
+{:paths ["src"]
+ :deps
+ {org.clojure/clojure {:mvn/version "1.10.1"}}
+ :aliases
+ {:dev   {:extra-paths ["dev" "test" "dev-resources"]
+          :extra-deps  {org.clojure/test.check {:mvn/version "0.10.0"}
+                        expound                {:mvn/version "0.7.2"}}}
+  :test  {:extra-paths ["test"]
+          :extra-deps  {com.cognitect/test-runner
+                        {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                         :sha     "209b64504cb3bd3b99ecfec7937b358a879f55c1"}
+                        org.clojure/test.check {:mvn/version "0.10.0"}}
+          :main-opts   ["-m" "cognitect.test-runner"]}
+  :spec2 {:extra-deps {org.clojure/spec-alpha2
+                       {:git/url "https://github.com/clojure/spec-alpha2"
+                        :sha     "2a0a7c49c86e31b528be857ed004a4931a0c2551"}}}
+  :1.9   {:override-deps {org.clojure/clojure {:mvn/version "1.9.0"}}}}}
