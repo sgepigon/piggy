@@ -59,7 +59,7 @@
 (defn compat-impl
   "Do not call this directly, use `compat`."
   [old new gfn frequency]
-  (let [specs {:old old :new new}]
+  (let [specs {:old old :new new :gen gfn :frequency frequency}]
     (reify
       clojure.lang.ILookup
       (valAt [_ k] (get specs (unqualify-keyword k)))
@@ -119,7 +119,9 @@
                :new new
                :args (compatize-kw :args)
                :ret (compatize-kw :ret)
-               :fn (compatize-kw :fn)}]
+               :fn (compatize-kw :fn)
+               :gen gfn
+               :frequency frequency}]
     (reify
       clojure.lang.ILookup
       (valAt [_ k] (get specs (unqualify-keyword k)))
