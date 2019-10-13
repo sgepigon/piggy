@@ -52,9 +52,12 @@
   (-> k name keyword))
 
 (defn- validate
-  "Return `::s/invalid` for breaking changes, otherwise return `conformed`."
-  [{:keys [new] :as conformed}]
-  (if (s/invalid? new) new conformed))
+  "Return `::s/invalid` for breaking changes for the key `k`, otherwise return
+  `conformed`."
+  ([conformed]
+   (validate :new conformed))
+  ([k conformed]
+   (if (s/invalid? (k conformed)) (k conformed) conformed)))
 
 (defn compat-impl
   "Do not call this directly, use `compat`."
