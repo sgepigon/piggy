@@ -49,7 +49,7 @@
 
 (defn- unqualify-keyword
   [k]
-  (-> k name keyword))
+  (if (qualified-keyword? k) (-> k name keyword) k))
 
 (defn- validate
   "Return `::s/invalid` for breaking changes for the key `k`, otherwise return
