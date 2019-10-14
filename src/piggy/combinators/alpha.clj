@@ -47,6 +47,10 @@
 
 ;; `compat` implementation
 
+(defn- unqualify-keyword
+  [k]
+  (-> k name keyword))
+
 (defn- validate
   "Return `::s/invalid` for breaking changes, otherwise return `conformed`."
   [{:keys [new] :as conformed}]
@@ -58,8 +62,8 @@
   (let [specs {:old old :new new}]
     (reify
       clojure.lang.ILookup
-      (valAt [_ k] (get specs k))
-      (valAt [_ k not-found] (get specs k not-found))
+      (valAt [_ k] (get specs (unqualify-keyword k)))
+      (valAt [_ k not-found] (get specs (unqualify-keyword k) not-found))
 
       s/Specize
       (specize* [s] s)
@@ -69,8 +73,8 @@
       (conform* [_ x] (validate {:old (s/conform* old x) :new (s/conform* new x)}))
       (unform* [_ x] (if (s/invalid? x) x (s/unform* new (:new x))))
       (explain* [_ path via in x]
-        (let [old-prob (s/explain* old (conj path :old) via in x)
-              new-prob (s/explain* new (conj path :new) via in x)]
+        (let [old-prob (s/explain* old (conj path ::old) via in x)
+              new-prob (s/explain* new (conj path ::new) via in x)]
           ((fnil into []) old-prob new-prob)))
       (gen* [_ overrides path rmap]
         (if gfn
@@ -118,8 +122,8 @@
                :fn (compatize-kw :fn)}]
     (reify
       clojure.lang.ILookup
-      (valAt [_ k] (get specs k))
-      (valAt [_ k not-found] (get specs k not-found))
+      (valAt [_ k] (get specs (unqualify-keyword k)))
+      (valAt [_ k not-found] (get specs (unqualify-keyword k) not-found))
 
       s/Specize
       (specize* [s] s)
@@ -140,16 +144,16 @@
             (when-not (identical? f args)
               (let [cargs (s/conform (:args specs) args)]
                 (if (s/invalid? cargs)
-                  (#'s/explain-1 nil (:args specs) (conj path :args) via in args)
+                  (#'s/explain-1 nil (:args specs) (conj path ::args) via in args)
                   (let [ret (try (apply f args) (catch Throwable t t))]
                     (if (instance? Throwable ret)
                       ;; When `s/fspec` adds exception data, add exception data.
                       [{:path path :pred '(apply fn) :val args :via via :in in :reason (.getMessage ^Throwable ret)}]
                       (let [cret (s/conform (:ret specs) ret)]
                         (if (s/invalid? cret)
-                          (#'s/explain-1 nil (:ret specs) (conj path :ret) via in ret)
+                          (#'s/explain-1 nil (:ret specs) (conj path ::ret) via in ret)
                           (when (:fn specs)
-                            (#'s/explain-1 nil (:fn specs) (conj path :fn) via in {:args cargs :ret cret}))))))))))
+                            (#'s/explain-1 nil (:fn specs) (conj path ::fn) via in {:args cargs :ret cret}))))))))))
           (#'s/explain-1 'ifn? ifn? path via in f)))
       (gen* [_ overrides _ _]
         (if gfn
