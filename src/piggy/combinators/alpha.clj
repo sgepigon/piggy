@@ -1,4 +1,5 @@
 (ns piggy.combinators.alpha
+  (:refer-clojure :exclude [reverse])
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as sgen]))
 
@@ -28,6 +29,15 @@
   [& {:keys [old new gen frequency] :or {frequency {:old 1 :new 1}}}]
   `(compat-impl (s/spec ~old) (s/spec ~new) ~gen ~frequency))
 
+(defmacro reverse
+  "Takes a `compat` spec and returns a spec with the compatibility between `:old`
+  and `:new` reversed.
+
+  Optionally takes `:gen` generator-fn or `:frequency` likelihood map. See
+  `compat` a full description of `:gen` and `:frequency`."
+  [form & {:keys [gen frequency]}]
+  `(reverse-impl (s/spec ~form) ~gen ~frequency))
+
 (defmacro fcompat
   "Takes `:old` and `:new` kwargs whose values are fspecs and returns a spec whose
   `s/conform` or `s/explain` take a fn and validates compatibility between
@@ -47,10 +57,6 @@
 
 ;; `compat` implementation
 
-(defn- unqualify-keyword
-  [k]
-  (if (qualified-keyword? k) (-> k name keyword) k))
-
 (defn- validate
   "Return `::s/invalid` for breaking changes for the key `k`, otherwise return
   `conformed`."
@@ -62,11 +68,11 @@
 (defn compat-impl
   "Do not call this directly, use `compat`."
   [old new gfn frequency]
-  (let [specs {:old old :new new :gen gfn :frequency frequency}]
+  (let [specs {::op `compat :old old :new new :gen gfn :frequency frequency}]
     (reify
       clojure.lang.ILookup
-      (valAt [_ k] (get specs (unqualify-keyword k)))
-      (valAt [_ k not-found] (get specs (unqualify-keyword k) not-found))
+      (valAt [_ k] (get specs k))
+      (valAt [_ k not-found] (get specs k not-found))
 
       s/Specize
       (specize* [s] s)
@@ -76,8 +82,8 @@
       (conform* [_ x] (validate {:old (s/conform* old x) :new (s/conform* new x)}))
       (unform* [_ x] (if (s/invalid? x) x (s/unform* new (:new x))))
       (explain* [_ path via in x]
-        (when-let [new-prob (s/explain* new (conj path ::new) via in x)]
-          (let [old-prob (s/explain* old (conj path ::old) via in x)]
+        (when-let [new-prob (s/explain* new (conj path :new) via in x)]
+          (let [old-prob (s/explain* old (conj path :old) via in x)]
             ((fnil into []) old-prob new-prob))))
       (gen* [_ overrides path rmap]
         (if gfn
@@ -87,6 +93,58 @@
       (with-gen* [_ gfn] (compat-impl old new gfn frequency))
       (describe* [_] `(compat :old ~(when old (s/describe* old))
                               :new ~(when new (s/describe* new)))))))
+
+;; `reverse` implementation
+
+(defn- reverse?
+  "Return true if `spec` is a reverse spec."
+  [spec]
+  (boolean (= `reverse (::op spec))))
+
+(defn reverse-impl
+  "Do not call this directly, use `reverse`."
+  [{:keys [old new] :as form} gfn frequency]
+  (let [frequency (or frequency (:frequency form))
+        gfn (or gfn (:gen form))
+        specs {::op `reverse
+               :spec form
+               :old old
+               :new new
+               :gen gfn
+               :frequency frequency}]
+    (reify
+      clojure.lang.ILookup
+      (valAt [_ k] (get specs k))
+      (valAt [_ k not-found] (get specs k not-found))
+
+      s/Specize
+      (specize* [s] s)
+      (specize* [s _] s)
+
+      s/Spec
+      (conform* [_ x]
+        (if (reverse? form)
+          (s/conform* (:spec form) x)
+          (validate :old {:old (s/conform* old x) :new (s/conform* new x)})))
+      (unform* [_ x]
+        (if (reverse? form)
+          (s/unform* (:spec form) x)
+          (if (s/invalid? x) x (s/unform* old (:old x)))))
+      (explain* [_ path via in x]
+        (if (reverse? form)
+          (s/explain* (:spec form) path via in x)
+          (when-let [old-prob (s/explain* old (conj path :old) via in x)]
+            (let [new-prob (s/explain* new (conj path :new) via in x)]
+              ((fnil into []) old-prob new-prob)))))
+      (gen* [_ overrides path rmap]
+        (if gfn
+          (gfn)
+          (if (reverse? form)
+            (s/gen* (:spec form) overrides path rmap)
+            (sgen/frequency [[(:old frequency) (s/gen* new overrides path rmap)]
+                             [(:new frequency) (s/gen* old overrides path rmap)]]))))
+      (with-gen* [_ gfn] (reverse-impl form gfn frequency))
+      (describe* [_] `(reverse ~(s/describe* form))))))
 
 ;; `fcompat` implementation
 
@@ -118,17 +176,18 @@
   "Do not call this directly, use `fcompat`."
   [old new gfn frequency]
   (let [compatize-kw (partial compatize old new frequency)
-        specs {:old old
+        specs {::op `fcompat
+               :old old
                :new new
                :args (compatize-kw :args)
-               :ret (compatize-kw :ret)
+               :ret (reverse (compatize-kw :ret))
                :fn (compatize-kw :fn)
                :gen gfn
                :frequency frequency}]
     (reify
       clojure.lang.ILookup
-      (valAt [_ k] (get specs (unqualify-keyword k)))
-      (valAt [_ k not-found] (get specs (unqualify-keyword k) not-found))
+      (valAt [_ k] (get specs k))
+      (valAt [_ k not-found] (get specs k not-found))
 
       s/Specize
       (specize* [s] s)
@@ -149,16 +208,16 @@
             (when-not (identical? f args)
               (let [cargs (s/conform (:args specs) args)]
                 (if (s/invalid? cargs)
-                  (#'s/explain-1 nil (:args specs) (conj path ::args) via in args)
+                  (#'s/explain-1 nil (:args specs) (conj path :args) via in args)
                   (let [ret (try (apply f args) (catch Throwable t t))]
                     (if (instance? Throwable ret)
                       ;; When `s/fspec` adds exception data, add exception data.
                       [{:path path :pred '(apply fn) :val args :via via :in in :reason (.getMessage ^Throwable ret)}]
                       (let [cret (s/conform (:ret specs) ret)]
                         (if (s/invalid? cret)
-                          (#'s/explain-1 nil (:ret specs) (conj path ::ret) via in ret)
+                          (#'s/explain-1 nil (:ret specs) (conj path :ret) via in ret)
                           (when (:fn specs)
-                            (#'s/explain-1 nil (:fn specs) (conj path ::fn) via in {:args cargs :ret cret}))))))))))
+                            (#'s/explain-1 nil (:fn specs) (conj path :fn) via in {:args cargs :ret cret}))))))))))
           (#'s/explain-1 'ifn? ifn? path via in f)))
       (gen* [_ overrides _ _]
         (if gfn
