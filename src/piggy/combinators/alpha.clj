@@ -35,8 +35,8 @@
 
   Optionally takes `:gen` generator-fn or `:frequency` likelihood map. See
   `compat` a full description of `:gen` and `:frequency`."
-  [form & {:keys [gen frequency]}]
-  `(reverse-impl (s/spec ~form) ~gen ~frequency))
+  [spec & {:keys [gen frequency]}]
+  `(reverse-impl (s/spec ~spec) ~gen ~frequency))
 
 (defmacro fcompat
   "Takes `:old` and `:new` kwargs whose values are fspecs and returns a spec whose
@@ -103,11 +103,11 @@
 
 (defn reverse-impl
   "Do not call this directly, use `reverse`."
-  [{:keys [old new] :as form} gfn frequency]
-  (let [frequency (or frequency (:frequency form))
-        gfn (or gfn (:gen form))
+  [{:keys [old new] :as spec} gfn frequency]
+  (let [frequency (or frequency (:frequency spec))
+        gfn (or gfn (:gen spec))
         specs {::op `reverse
-               :spec form
+               :spec spec
                :old old
                :new new
                :gen gfn
@@ -123,28 +123,28 @@
 
       s/Spec
       (conform* [_ x]
-        (if (reverse? form)
-          (s/conform* (:spec form) x)
+        (if (reverse? spec)
+          (s/conform* (:spec spec) x)
           (validate :old {:old (s/conform* old x) :new (s/conform* new x)})))
       (unform* [_ x]
-        (if (reverse? form)
-          (s/unform* (:spec form) x)
+        (if (reverse? spec)
+          (s/unform* (:spec spec) x)
           (if (s/invalid? x) x (s/unform* old (:old x)))))
       (explain* [_ path via in x]
-        (if (reverse? form)
-          (s/explain* (:spec form) path via in x)
+        (if (reverse? spec)
+          (s/explain* (:spec spec) path via in x)
           (when-let [old-prob (s/explain* old (conj path :old) via in x)]
             (let [new-prob (s/explain* new (conj path :new) via in x)]
               ((fnil into []) old-prob new-prob)))))
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
-          (if (reverse? form)
-            (s/gen* (:spec form) overrides path rmap)
+          (if (reverse? spec)
+            (s/gen* (:spec spec) overrides path rmap)
             (sgen/frequency [[(:old frequency) (s/gen* new overrides path rmap)]
                              [(:new frequency) (s/gen* old overrides path rmap)]]))))
-      (with-gen* [_ gfn] (reverse-impl form gfn frequency))
-      (describe* [_] `(reverse ~(s/describe* form))))))
+      (with-gen* [_ gfn] (reverse-impl spec gfn frequency))
+      (describe* [_] `(reverse ~(s/describe* spec))))))
 
 ;; `fcompat` implementation
 
