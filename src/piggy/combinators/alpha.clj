@@ -84,7 +84,7 @@
       (explain* [_ path via in x]
         (when-let [new-prob (s/explain* new (conj path :new) via in x)]
           (let [old-prob (s/explain* old (conj path :old) via in x)]
-            ((fnil into []) old-prob new-prob))))
+            (into (vec old-prob) new-prob))))
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
@@ -135,7 +135,7 @@
           (s/explain* (:spec spec) path via in x)
           (when-let [old-prob (s/explain* old (conj path :old) via in x)]
             (let [new-prob (s/explain* new (conj path :new) via in x)]
-              ((fnil into []) old-prob new-prob)))))
+              (into (vec old-prob) new-prob)))))
       (gen* [_ overrides path rmap]
         (if gfn
           (gfn)
@@ -166,11 +166,17 @@
   ;; Use `s/gen*` because `s/gen` suppresses invalid generated values. To test
   ;; the args spec, we need to pass potentially invalid values.
   (let [g (s/gen* (:args specs) nil [] {::s/recursion-limit s/*recursion-limit*})
-        prop (sgen/for-all* [g] #(#'s/call-valid? f specs %))]
-    (let [ret (sgen/quick-check iters prop)]
-      (if-let [[smallest] (-> ret :shrunk :smallest)]
-        smallest
-        f))))
+        prop (sgen/for-all* [g] #(#'s/call-valid? f specs %))
+        {:keys [seed] :as ret} (sgen/quick-check iters prop)]
+    (if-let [[smallest] (-> ret :shrunk :smallest)]
+      {:args smallest :seed seed}
+      ;; Check that the return is more constrained
+      (let [rgen (s/gen* (:ret specs) nil [] {::s/recursion-limit s/*recursion-limit*})
+            rprop (sgen/for-all* [rgen] #(s/valid? (:ret specs) %))
+            rret (sgen/quick-check iters rprop :seed seed)]
+        (if-let [[rsmallest] (-> rret :shrunk :smallest)]
+          {:problem :less-constrained :ret rsmallest :seed seed}
+          f)))))
 
 (defn fcompat-impl
   "Do not call this directly, use `fcompat`."
@@ -203,21 +209,25 @@
       (unform* [_ f] f)
       (explain* [_ path via in f]
         (if (ifn? f)
-          (let [args (validate-fn f specs *fcompat-iterations*)]
+          (let [validated (validate-fn f specs *fcompat-iterations*)]
             ;; return nil on success. Like `s/fspec`, might not be reproducible.
-            (when-not (identical? f args)
-              (let [cargs (s/conform (:args specs) args)]
-                (if (s/invalid? cargs)
-                  (#'s/explain-1 nil (:args specs) (conj path :args) via in args)
-                  (let [ret (try (apply f args) (catch Throwable t t))]
-                    (if (instance? Throwable ret)
-                      ;; When `s/fspec` adds exception data, add exception data.
-                      [{:path path :pred '(apply fn) :val args :via via :in in :reason (.getMessage ^Throwable ret)}]
-                      (let [cret (s/conform (:ret specs) ret)]
-                        (if (s/invalid? cret)
-                          (#'s/explain-1 nil (:ret specs) (conj path :ret) via in ret)
-                          (when (:fn specs)
-                            (#'s/explain-1 nil (:fn specs) (conj path :fn) via in {:args cargs :ret cret}))))))))))
+            (when-not (identical? f validated)
+              (let [{vargs :args vret :ret problem :problem} validated]
+                (if (= problem :less-constrained)
+                  (-> (#'s/explain-1 nil (:ret specs) (conj path :ret) via in vret)
+                      (assoc-in [0 :reason] "[:ret :new] is less constrained than [:ret :old]"))
+                  (let [cargs (s/conform (:args specs) vargs)]
+                    (if (s/invalid? cargs)
+                      (#'s/explain-1 nil (:args specs) (conj path :args) via in vargs)
+                      (let [ret (try (apply f vargs) (catch Throwable t t))]
+                        (if (instance? Throwable ret)
+                          ;; When `s/fspec` adds exception data, add exception data.
+                          [{:path path :pred '(apply fn) :val vargs :via via :in in :reason (.getMessage ^Throwable ret)}]
+                          (let [cret (s/conform (:ret specs) ret)]
+                            (if (s/invalid? cret)
+                              (#'s/explain-1 nil (:ret specs) (conj path :ret) via in ret)
+                              (when (:fn specs)
+                                (#'s/explain-1 nil (:fn specs) (conj path :fn) via in {:args cargs :ret cret}))))))))))))
           (#'s/explain-1 'ifn? ifn? path via in f)))
       (gen* [_ overrides _ _]
         (if gfn

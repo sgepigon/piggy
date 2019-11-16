@@ -30,7 +30,7 @@
 (s/def ::fn-int-variadic (s/fspec :args ::int-variadic, :ret ::int))
 (s/def ::fn-number-variadic (s/fspec :args ::number-variadic, :ret ::number))
 
-(s/fdef clojure.core/+
+(s/fdef clojure.core/+'
   :args (s/* ::number)
   :ret ::number)
 
@@ -62,19 +62,19 @@
                (valid? (-> num-to-int pc/reverse pc/reverse pc/reverse (s/conform 1.0))))))))
 
 (deftest consistency-test
-  (binding [pc/*fcompat-iterations* 1000]
+  (binding [s/*fspec-iterations* 1000]
     (testing "test conforming on the same spec gives the same answer."
-      (is (-> (pc/fcompat :old (s/get-spec `+)
-                          :new (s/get-spec `+))
-              (s/conform +)
+      (is (-> (pc/fcompat :old (s/get-spec `+')
+                          :new (s/get-spec `+'))
+              (s/conform +')
               valid?))
       (is (-> (pc/fcompat :old ::fn-number-variadic
-                          :new (s/get-spec `+))
-              (s/conform +)
+                          :new (s/get-spec `+'))
+              (s/conform +')
               valid?))
-      (is (-> (pc/fcompat :old (s/get-spec `+)
+      (is (-> (pc/fcompat :old (s/get-spec `+')
                           :new ::fn-number-variadic)
-              (s/conform +)
+              (s/conform +')
               valid?)))))
 
 (defn- spec-ulation-fn
@@ -106,7 +106,7 @@
            :ret (s/keys :req-un [::num ::wheat])))
 
 (deftest accretion-test
-  (binding [pc/*fcompat-iterations* 1000]
+  (binding [s/*fspec-iterations* 1000]
     (testing "For function return values, test providing more does not break the
   spec."
       (testing "Spec-ulation example."
@@ -127,20 +127,20 @@
            :ret (s/keys :req-un [::steel])))
 
 (deftest relaxation-test
-  (binding [pc/*fcompat-iterations* 1000]
+  (binding [s/*fspec-iterations* 1000]
     (testing "For function arguments, test that requiring less does not break the
   spec."
       (is (-> (pc/fcompat :old (s/fspec :args ::int-arity-2)
                           :new (s/fspec :args ::number-arity-2))
-              (s/conform +)
+              (s/conform +')
               valid?))
       (is (-> (pc/fcompat :old (s/fspec :args ::number-arity-2)
                           :new (s/fspec :args ::number-variadic))
-              (s/conform +)
+              (s/conform +')
               valid?))
       (is (-> (pc/fcompat :old (s/fspec :args ::int-arity-2)
                           :new (s/fspec :args ::number-variadic))
-              (s/conform +)
+              (s/conform +')
               valid?))
       (testing "Spec-ulation example."
         (is (-> (pc/fcompat :old ::relax-wheat-and-donkey
@@ -149,43 +149,42 @@
                 valid?))))))
 
 (deftest breakage-test
-  (binding [pc/*fcompat-iterations* 1000]
+  (binding [s/*fspec-iterations* 1000]
     (testing "For function arguments, test requiring more breaks the spec."
 
       (is (-> (pc/fcompat :old (s/fspec :args ::number-arity-2)
                           :new (s/fspec :args ::int-arity-2))
-              (s/conform +)
+              (s/conform +')
               s/invalid?))
       (is (-> (pc/fcompat :old (s/fspec :args ::number-variadic)
                           :new (s/fspec :args ::number-arity-2))
-              (s/conform +)
+              (s/conform +')
               s/invalid?))
       (is (-> (pc/fcompat :old (s/fspec :args ::number-variadic)
                           :new (s/fspec :args ::int-arity-2))
-              (s/conform +)
+              (s/conform +')
               s/invalid?))
       (testing "Spec-ulation example."
         (is (-> (pc/fcompat :old ::relax-wheat
                             :new ::relax-wheat-and-donkey)
-                (s/conform (spec-ulation-fn :old))
+                (s/conform (spec-ulation-fn :new))
                 s/invalid?))))
 
     (testing "Strengthening a promise (the return) is a compatibile change."
       (is (-> (pc/fcompat :old (s/fspec :args ::number-variadic :ret (s/nilable ::number))
                           :new (s/fspec :args ::number-variadic :ret ::number))
-              (s/conform +)
+              (s/conform +')
               valid?)))
 
-    (testing "TODO Weakening a promise (the return) is a breaking change."
-      (comment
-        (is (-> (pc/fcompat :old (s/fspec :args ::number-variadic :ret ::number)
-                            :new (s/fspec :args ::number-variadic :ret any?))
-                (s/conform +)
-                s/invalid?))))
+    (testing "Weakening a promise (the return) is a breaking change."
+      (is (-> (pc/fcompat :old (s/fspec :args ::number-variadic :ret ::number)
+                          :new (s/fspec :args ::number-variadic :ret any?))
+              (s/conform +')
+              s/invalid?)))
 
     (testing "For function return values, test providing less breaks the spec."
       (testing "Spec-ulation example."
         (is (-> (pc/fcompat :old ::provide-num-and-wheat
                             :new ::provide-num)
-                (s/conform (spec-ulation-fn :old))
+                (s/conform (spec-ulation-fn :new))
                 s/invalid?))))))
