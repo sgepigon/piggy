@@ -13,5 +13,5 @@
           :main-opts   ["-m" "cognitect.test-runner"]}
   :spec2 {:extra-deps {org.clojure/spec-alpha2
                        {:git/url "https://github.com/clojure/spec-alpha2"
-                        :sha     "2a0a7c49c86e31b528be857ed004a4931a0c2551"}}}
+                        :sha     "cef04589198e18ac81b8de2142921e82b4dece48"}}}
   :1.9   {:override-deps {org.clojure/clojure {:mvn/version "1.9.0"}}}}}
