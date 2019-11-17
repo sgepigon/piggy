@@ -214,8 +214,13 @@
             (when-not (identical? f validated)
               (let [{vargs :args vret :ret problem :problem} validated]
                 (if (= problem :less-constrained)
-                  (-> (#'s/explain-1 nil (:ret specs) (conj path :ret) via in vret)
-                      (assoc-in [0 :reason] "[:ret :new] is less constrained than [:ret :old]"))
+                  (let [explain (#'s/explain-1 nil (:ret specs) (conj path :ret) via in vret)
+                        pred (get-in explain [0 :pred])
+                        reason (format "%s: %s is less constrained than %s"
+                                       pred
+                                       (s/describe (:new (:ret specs)))
+                                       (s/describe (:old (:ret specs))))]
+                    (assoc-in explain [0 :reason] reason))
                   (let [cargs (s/conform (:args specs) vargs)]
                     (if (s/invalid? cargs)
                       (#'s/explain-1 nil (:args specs) (conj path :args) via in vargs)
