@@ -9,6 +9,10 @@
 `piggy` is a Clojure library that helps with broken
 [specs](https://clojure.org/about/spec).
 
+## Project Status
+
+Will be in alpha as long as `clojure.spec` is in alpha.
+
 ## Installation
 
 Download from <https://github.com/sgepigon/piggy>.
@@ -19,82 +23,151 @@ Let's say we're writing a spec for `clojure.core/+`. We might start out
 like this:
 
 ``` clojure
-(ns piggy.readme
-  (:require [clojure.spec.alpha :as s]
-            [piggy.combinators.alpha :as pc]))
+(ns piggy.demo.readme
+  (:require
+   [clojure.spec.alpha :as s]
+   [piggy.combinators.alpha :as pc]))
 
-(+ 1 2) ; => 3
-(s/def ::int-fn (s/fspec :args (s/cat :x int? :y int?) :ret int?))
-(s/conform (s/get-spec ::int-fn) +) ; => #function[clojure.core/+]
+(+ 2 2)
+;; => 4
+
+(s/fspec :args (s/cat :x int? :y int?)
+         :ret int?)
+
+;; `s/fspec` returns the function itself on a successful conform
+(s/conform (s/fspec :args (s/cat :x int? :y int?)
+                    :ret int?)
+           +)
+;; => #function[clojure.core/+]
+
+;; Can also use `s/explain` to print a human readable message:
+(s/explain (s/fspec :args (s/cat :x int? :y int?)
+                    :ret int?)
+           +)
+;; => Success!
 ```
 
-We soon realize that we forgot that `clojure.core/+` also works over
-other numbers.
-
-``` clojure
-(+ 1.5 2.5) ; => 4.0
-(+ 1/2 3/4) ; => 5/4
-```
-
-We update our spec
-accordingly:
-
-``` clojure
-(s/def ::number-fn (s/fspec :args (s/cat :x number? :y number?) :ret number?))
-(s/conform (s/get-spec ::number-fn) +) ; => #function[clojure.core/+]
-```
-
-How do we know change isn't a *breaking change*? `fcompat` is a spec
-combinator that encodes a compatibility property between two specs.
-`fcompat` is a spec itself, so the same functions that work on
-`clojure.spec` specs (`s/conform`, `s/unform`, `s/explain`, `s/gen`,
-`s/with-gen`, and `s/describe`) work on `compat` and
-`fcompat`.
-
-``` clojure
-(s/conform (pc/fcompat :old ::int-fn :new ::number-fn) +) ; => #function[clojure.core/+]
-
-;; If we switch `:old` and `:new` we get a breaking change (i.e. we require more and provide less)
-(s/conform (pc/fcompat :new ::int-fn :old ::number-fn) +) ; => :clojure.spec.alpha/invalid
-(s/explain (pc/fcompat :new ::int-fn :old ::number-fn) +)
-;; => 1.0 - failed: int? in: [0] at: [:args :new :x]
-```
-
-But wait\! We also forgot `clojure.core/+` is variadic:
+We think about it a little more and realize `+` is variadic:
 
 ``` clojure
 (+) ; => 0
-(+ 1.0) ; => 1.0
+(+ 1) ; => 1
 (+ 0 1 2 3 4 5 6 7 8 9) ; => 45
 ```
 
-Let's update our spec again and see if it's
-compatible:
+We can use `s/*` for zero or more ints.
 
 ``` clojure
-(s/def ::variadic-number-fn (s/fspec :args (s/* number?) :ret number?)) ; variadic
-(s/conform (s/get-spec ::variadic-number-fn) +) ; => #function[clojure.core/+]
+(s/explain (s/fspec :args (s/* int?)
+                    :ret int?)
+           +)
+;; => (-8782045379102980082 -441326657751795727) - failed: integer overflow
+```
 
+Two things are going on here:
 
-(s/conform (pc/fcompat :old ::number-fn :new ::variadic-number-fn) +) ; => #function[clojure.core/+]
+1.  Because we switch from a 2-arity—`(s/cat :x int? y: int?)`—to
+    variadic—`(s/* int?)`—we're hitting integer overflow.
 
-;; Again, switching `:old` and `:new` gives us a breaking change
-(s/conform (pc/fcompat :new ::number-fn :old ::variadic-number-fn) +) ; => :clojure.spec.alpha/invalid
-(s/explain (pc/fcompat :new ::number-fn :old ::variadic-number-fn) +)
+2.  Turns out `clojure.core/+` doesn't auto-promote. But there is a
+    built-in Clojure function, `clojure.core/+'`, that does arbitrary
+    precision.
+    
+    So let's try this with `+'`.
+
+<!-- end list -->
+
+``` clojure
+(s/explain (s/fspec :args (s/* int?)
+                    :ret int?)
+           +')
+;; => 9223372036854775808N - failed: int? at: [:ret]
+```
+
+We can see it auto-promotes but now our return spec is wrong. We also
+realize `+'` takes all sorts of numbers.
+
+``` clojure
+(+ -1 3.14 22/7 0x77)
+;; => 124.28285714285714
+```
+
+Let's update `int?` to `number?`
+
+``` clojure
+(s/explain (s/fspec :args (s/* number?)
+                    :ret number?)
+           +')
+;; => Success!
+```
+
+Cool, we're more comfortable with this spec. How do we know change isn't
+a *breaking change*?
+
+`compat` and `fcompat` are spec combinators that encodes a compatibility
+property between two specs.
+
+`compat` is for simple comparsions over specs and predicates while
+`fcompat` is used to compare compatibility between functions. `s/spec`
+is to `compat` as `s/fspec` is to `fcompat`.
+
+The combinators are is a spec themselves, so the same functions that
+work on `clojure.spec` specs (`s/conform`, `s/unform`, `s/explain`,
+`s/gen`, `s/with-gen`, and `s/describe`) work on `compat` and `fcompat`.
+
+``` clojure
+(s/explain (pc/fcompat :old (s/fspec :args (s/cat :x int? :y int?)
+                                     :ret int?)
+                       :new (s/fspec :args (s/* number?)
+                                     :ret number?))
+           +')
+;; => 1.0 - failed: int? at: [:ret :old]
+```
+
+We see here it's a breaking change: we promised an `int?` but now we're
+saying we're returning a `number?`—this is *weakening* a promise.
+
+We can show it trivially with `clojure.core/any?`
+
+``` clojure
+(s/explain (pc/fcompat :old (s/fspec :args (s/* number?)
+                                     :ret number?)
+                       :new (s/fspec :args (s/* number?)
+                                     :ret any?))
+           +')
+;; => \space - failed: clojure.core/number?: any? is less constrained than
+;; number? at: [:ret :old]
+```
+
+Similarlity, we can show a breaking change by requiring more in the
+arguments:
+
+``` clojure
+(s/explain (pc/fcompat :old (s/fspec :args (s/* number?)
+                                     :ret number?)
+                       :new (s/fspec :args (s/cat :x number? :y number?)
+                                     :ret number?))
+           +')
 ;; => () - failed: Insufficient input at: [:args :new :x]
 ```
 
 ## Developers
 
-Run Clojure unit tests with:
+Run Clojure unit tests with either:
 
 ``` example
 lein test
 ```
 
+or
+
+``` example
+clj -A:test
+```
+
 ## License
 
-Copyright © 2018 Santiago Gepigon III
+Copyright © 2018–2019 Santiago Gepigon III
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
